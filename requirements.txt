@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+psycopg2-binary
+python-dotenv
+httpx
+pillow
+python-multipart
+pydantic-settings
+groq
+sentence-transformers

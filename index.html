@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PIM — Smart Product Manager</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,wght@0,300;0,600;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0e0e0e;
+    --surface: #161616;
+    --surface2: #1f1f1f;
+    --border: #2a2a2a;
+    --accent: #c8f04a;
+    --accent2: #4af0c8;
+    --text: #f0ede6;
+    --muted: #666;
+    --danger: #f05a4a;
+    --mono: 'DM Mono', monospace;
+    --serif: 'Fraunces', serif;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(200,240,74,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(200,240,74,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .layout {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    min-height: 100vh;
+  }
+
+  /* Sidebar */
+  .sidebar {
+    border-right: 1px solid var(--border);
+    padding: 32px 0;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  .logo {
+    padding: 0 24px 32px;
+    border-bottom: 1px solid var(--border);
+  }
+  .logo-mark {
+    font-family: var(--serif);
+    font-size: 22px;
+    font-weight: 300;
+    color: var(--accent);
+    letter-spacing: -0.5px;
+  }
+  .logo-sub {
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+  .nav {
+    padding: 24px 0;
+    flex: 1;
+  }
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 24px;
+    cursor: pointer;
+    color: var(--muted);
+    transition: all 0.15s;
+    border-left: 2px solid transparent;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+  }
+  .nav-item:hover { color: var(--text); background: var(--surface); }
+  .nav-item.active {
+    color: var(--accent);
+    border-left-color: var(--accent);
+    background: rgba(200,240,74,0.05);
+  }
+  .nav-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    flex-shrink: 0;
+  }
+  .sidebar-footer {
+    padding: 16px 24px;
+    border-top: 1px solid var(--border);
+  }
+  .api-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 6px var(--accent);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  /* Main content */
+  .main {
+    padding: 40px 48px;
+    max-width: 900px;
+  }
+  .page { display: none; animation: fadeIn 0.2s ease; }
+  .page.active { display: block; }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+
+  .page-header {
+    margin-bottom: 32px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+  }
+  .page-title {
+    font-family: var(--serif);
+    font-size: 28px;
+    font-weight: 300;
+    color: var(--text);
+    letter-spacing: -0.5px;
+  }
+  .page-title em { font-style: italic; color: var(--accent); }
+  .page-desc { color: var(--muted); margin-top: 6px; font-size: 12px; }
+
+  /* Cards */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px;
+    margin-bottom: 16px;
+  }
+  .card-label {
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+
+  /* Form elements */
+  .form-row { margin-bottom: 16px; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  label {
+    display: block;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  input, textarea, select {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 10px 12px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  input:focus, textarea:focus { border-color: var(--accent); }
+  textarea { resize: vertical; min-height: 80px; }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    transition: all 0.15s;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: #0e0e0e;
+  }
+  .btn-primary:hover { background: #d4f55a; transform: translateY(-1px); }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+  .btn-ghost {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-danger {
+    background: transparent;
+    color: var(--danger);
+    border: 1px solid var(--danger);
+  }
+  .btn-sm { padding: 6px 12px; font-size: 11px; }
+
+  /* Response box */
+  .response-box {
+    background: #0a0a0a;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 16px;
+    margin-top: 16px;
+    font-size: 12px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: var(--accent2);
+    min-height: 60px;
+    display: none;
+  }
+  .response-box.visible { display: block; }
+  .response-box.error { color: var(--danger); }
+
+  /* Tag */
+  .tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 2px;
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .tag-green { background: rgba(200,240,74,0.1); color: var(--accent); }
+  .tag-teal { background: rgba(74,240,200,0.1); color: var(--accent2); }
+  .tag-red { background: rgba(240,90,74,0.1); color: var(--danger); }
+
+  /* Product list */
+  .product-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto auto;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .product-row:last-child { border-bottom: none; }
+  .product-name { font-weight: 500; color: var(--text); }
+  .product-sku { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .product-price { color: var(--accent); font-size: 12px; }
+
+  /* Search results */
+  .search-result {
+    padding: 16px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    margin-bottom: 10px;
+    background: var(--surface);
+    transition: border-color 0.15s;
+  }
+  .search-result:hover { border-color: var(--accent2); }
+  .result-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+  .result-name { font-family: var(--serif); font-size: 16px; font-weight: 300; }
+  .result-score { font-size: 11px; color: var(--accent2); }
+  .result-desc { color: var(--muted); font-size: 12px; line-height: 1.5; }
+
+  /* Loading spinner */
+  .spinner {
+    display: inline-block;
+    width: 12px; height: 12px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Stats row */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+  }
+  .stat-value {
+    font-family: var(--serif);
+    font-size: 32px;
+    font-weight: 300;
+    color: var(--accent);
+  }
+  .stat-label { font-size: 11px; color: var(--muted); margin-top: 4px; letter-spacing: 1px; text-transform: uppercase; }
+
+  /* Divider */
+  .divider { height: 1px; background: var(--border); margin: 24px 0; }
+
+  /* Attr pills */
+  .attr-pill {
+    display: inline-flex;
+    gap: 6px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 4px 10px;
+    font-size: 11px;
+    margin: 3px;
+  }
+  .attr-key { color: var(--muted); }
+  .attr-val { color: var(--accent2); }
+
+  .empty-state {
+    text-align: center;
+    padding: 48px;
+    color: var(--muted);
+  }
+  .empty-icon { font-size: 32px; margin-bottom: 12px; opacity: 0.4; }
+</style>
+</head>
+<body>
+
+<div class="layout">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-mark">PIM<em style="font-style:italic">·</em>ai</div>
+      <div class="logo-sub">Product Intelligence</div>
+    </div>
+    <nav class="nav">
+      <div class="nav-item active" onclick="showPage('dashboard', event)">
+        <span class="nav-dot"></span> Dashboard
+      </div>
+      <div class="nav-item" onclick="showPage('add', event)">
+        <span class="nav-dot"></span> Add Product
+      </div>
+      <div class="nav-item" onclick="showPage('ai', event)">
+        <span class="nav-dot"></span> AI Features
+      </div>
+      <div class="nav-item" onclick="showPage('search', event)">
+        <span class="nav-dot"></span> NL Search
+      </div>
+      <div class="nav-item" onclick="showPage('sync', event)">
+        <span class="nav-dot"></span> WooCommerce Sync
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="api-status">
+        <span class="status-dot"></span>
+        API connected
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+
+    <!-- Dashboard -->
+    <div class="page active" id="page-dashboard">
+      <div class="page-header">
+        <h1 class="page-title">Good to see you, <em>Nyk</em></h1>
+        <p class="page-desc">Your AI-powered product catalog at a glance.</p>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value" id="stat-products">—</div>
+          <div class="stat-label">Total Products</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-synced">—</div>
+          <div class="stat-label">Synced to Woo</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-embedded">—</div>
+          <div class="stat-label">Embedded</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-label">Recent Products</div>
+        <div id="product-list">
+          <div class="empty-state">
+            <div class="empty-icon">◻</div>
+            Loading products...
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add Product -->
+    <div class="page" id="page-add">
+      <div class="page-header">
+        <h1 class="page-title">Add <em>Product</em></h1>
+        <p class="page-desc">Create a new product entry. AI will handle descriptions and attributes.</p>
+      </div>
+      <div class="card">
+        <div class="card-label">Product Details</div>
+        <div class="form-grid">
+          <div class="form-row">
+            <label>Product Name *</label>
+            <input type="text" id="p-name" placeholder="e.g. Wireless Headphones Pro">
+          </div>
+          <div class="form-row">
+            <label>SKU *</label>
+            <input type="text" id="p-sku" placeholder="e.g. WHP-001">
+          </div>
+          <div class="form-row">
+            <label>Price (USD)</label>
+            <input type="number" id="p-price" placeholder="0.00" step="0.01">
+          </div>
+          <div class="form-row">
+            <label>Category</label>
+            <input type="text" id="p-category" placeholder="e.g. Electronics">
+          </div>
+        </div>
+        <div class="form-row">
+          <label>Raw Product Info</label>
+          <textarea id="p-raw" placeholder="Paste any raw product info here — specs, notes, descriptions. AI will extract structured attributes from this."></textarea>
+        </div>
+        <button class="btn btn-primary" onclick="createProduct()">
+          <span id="create-spinner" style="display:none" class="spinner"></span>
+          Create Product
+        </button>
+        <div class="response-box" id="create-response"></div>
+      </div>
+    </div>
+
+    <!-- AI Features -->
+    <div class="page" id="page-ai">
+      <div class="page-header">
+        <h1 class="page-title"><em>AI</em> Features</h1>
+        <p class="page-desc">Generate descriptions and extract attributes using Groq LLM.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-label">Generate Description</div>
+        <div class="form-row">
+          <label>Product ID</label>
+          <input type="number" id="desc-id" placeholder="Enter product ID">
+        </div>
+        <button class="btn btn-primary" onclick="generateDesc()">
+          <span id="desc-spinner" style="display:none" class="spinner"></span>
+          Generate Description
+        </button>
+        <div class="response-box" id="desc-response"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-label">Extract Attributes from Text</div>
+        <div class="form-row">
+          <label>Product ID</label>
+          <input type="number" id="attr-id" placeholder="Enter product ID">
+        </div>
+        <button class="btn btn-primary" onclick="extractAttrs()">
+          <span id="attr-spinner" style="display:none" class="spinner"></span>
+          Extract Attributes
+        </button>
+        <div class="response-box" id="attr-response"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-label">Extract Attributes from Image</div>
+        <div class="form-row">
+          <label>Product ID</label>
+          <input type="number" id="img-id" placeholder="Enter product ID">
+        </div>
+        <div class="form-row">
+          <label>Product Image</label>
+          <input type="file" id="img-file" accept="image/*">
+        </div>
+        <button class="btn btn-primary" onclick="extractFromImage()">
+          <span id="img-spinner" style="display:none" class="spinner"></span>
+          Extract from Image
+        </button>
+        <div class="response-box" id="img-response"></div>
+      </div>
+    </div>
+
+    <!-- NL Search -->
+    <div class="page" id="page-search">
+      <div class="page-header">
+        <h1 class="page-title">Natural Language <em>Search</em></h1>
+        <p class="page-desc">Search your catalog using plain English. Powered by sentence-transformers.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-label">Embed All Products First</div>
+        <p style="color:var(--muted);font-size:12px;margin-bottom:16px">Run this once to generate embeddings for all products before searching.</p>
+        <button class="btn btn-ghost" onclick="embedAll()">
+          <span id="embed-spinner" style="display:none" class="spinner"></span>
+          Embed All Products
+        </button>
+        <div class="response-box" id="embed-response"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-label">Search</div>
+        <div class="form-row">
+          <label>Query</label>
+          <input type="text" id="search-query" placeholder="e.g. noise cancelling headphones with long battery life" onkeydown="if(event.key==='Enter') doSearch()">
+        </div>
+        <div class="form-row">
+          <label>Top K Results</label>
+          <input type="number" id="search-k" value="5" min="1" max="20">
+        </div>
+        <button class="btn btn-primary" onclick="doSearch()">
+          <span id="search-spinner" style="display:none" class="spinner"></span>
+          Search
+        </button>
+      </div>
+
+      <div id="search-results"></div>
+    </div>
+
+    <!-- Sync -->
+    <div class="page" id="page-sync">
+      <div class="page-header">
+        <h1 class="page-title">WooCommerce <em>Sync</em></h1>
+        <p class="page-desc">Push products to your WooCommerce store.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-label">Sync Single Product</div>
+        <div class="form-row">
+          <label>Product ID</label>
+          <input type="number" id="sync-id" placeholder="Enter product ID">
+        </div>
+        <button class="btn btn-primary" onclick="syncProduct()">
+          <span id="sync-spinner" style="display:none" class="spinner"></span>
+          Sync to WooCommerce
+        </button>
+        <div class="response-box" id="sync-response"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-label">Sync All Unsynced Products</div>
+        <p style="color:var(--muted);font-size:12px;margin-bottom:16px">Pushes all products that haven't been synced yet.</p>
+        <button class="btn btn-ghost" onclick="syncAll()">
+          <span id="syncall-spinner" style="display:none" class="spinner"></span>
+          Sync All
+        </button>
+        <div class="response-box" id="syncall-response"></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+// Same origin when UI is opened from uvicorn (http://127.0.0.1:8000/); else talk to API on :8000
+const API = window.location.port === '8000' ? '' : 'http://localhost:8000';
+
+// Navigation
+function showPage(name, ev) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  const target = ev && ev.currentTarget;
+  if (target) target.classList.add('active');
+  if (name === 'dashboard') loadDashboard();
+}
+
+// Helpers
+function showResponse(id, data, isError = false) {
+  const el = document.getElementById(id);
+  el.classList.add('visible');
+  el.classList.toggle('error', isError);
+  el.textContent = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+}
+function setLoading(spinnerId, btnEl, loading) {
+  document.getElementById(spinnerId).style.display = loading ? 'inline-block' : 'none';
+}
+function formatApiError(data, res) {
+  if (data == null) return res.statusText || String(res.status);
+  const d = data.detail;
+  if (typeof d === 'string') return d;
+  if (Array.isArray(d)) return d.map((x) => x.msg || JSON.stringify(x)).join('; ');
+  if (d != null) return typeof d === 'object' ? JSON.stringify(d) : String(d);
+  return JSON.stringify(data);
+}
+async function apiFetch(path, method = 'GET', body = null) {
+  const opts = { method, headers: {} };
+  if (body != null) {
+    opts.headers['Content-Type'] = 'application/json';
+    opts.body = JSON.stringify(body);
+  }
+  const res = await fetch(API + path, opts);
+  const text = await res.text();
+  let data = null;
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      throw new Error(`${res.status}: ${text.slice(0, 200)}`);
+    }
+  }
+  if (!res.ok) throw new Error(formatApiError(data, res));
+  return data;
+}
+
+// Dashboard
+async function loadDashboard() {
+  try {
+    const products = await apiFetch('/products/');
+    document.getElementById('stat-products').textContent = products.length;
+    document.getElementById('stat-synced').textContent = products.filter(p => p.woo_product_id).length;
+    document.getElementById('stat-embedded').textContent = products.filter(p => p.embedding !== null).length;
+
+    const list = document.getElementById('product-list');
+    if (!products.length) {
+      list.innerHTML = '<div class="empty-state"><div class="empty-icon">◻</div>No products yet. Add your first one.</div>';
+      return;
+    }
+    list.innerHTML = products.slice(0, 8).map(p => `
+      <div class="product-row">
+        <div>
+          <div class="product-name">${p.name}</div>
+          <div class="product-sku">${p.sku}</div>
+        </div>
+        <div>${p.category ? `<span class="tag tag-teal">${p.category}</span>` : ''}</div>
+        <div class="product-price">${p.price ? '$' + p.price.toFixed(2) : '—'}</div>
+        <div>${p.woo_product_id ? '<span class="tag tag-green">synced</span>' : '<span class="tag tag-red">unsynced</span>'}</div>
+      </div>
+    `).join('');
+  } catch(e) {
+    document.getElementById('product-list').innerHTML = '<div class="empty-state">Could not connect to API. Is the server running?</div>';
+  }
+}
+
+// Create product
+async function createProduct() {
+  const name = document.getElementById('p-name').value.trim();
+  const sku = document.getElementById('p-sku').value.trim();
+  if (!name || !sku) { showResponse('create-response', 'Name and SKU are required.', true); return; }
+  setLoading('create-spinner', null, true);
+  try {
+    const data = await apiFetch('/products/', 'POST', {
+      name, sku,
+      price: parseFloat(document.getElementById('p-price').value) || null,
+      category: document.getElementById('p-category').value || null,
+      raw_input: document.getElementById('p-raw').value || null
+    });
+    showResponse('create-response', data);
+    document.getElementById('p-name').value = '';
+    document.getElementById('p-sku').value = '';
+    document.getElementById('p-price').value = '';
+    document.getElementById('p-category').value = '';
+    document.getElementById('p-raw').value = '';
+  } catch(e) { showResponse('create-response', 'API error: ' + e.message, true); }
+  setLoading('create-spinner', null, false);
+}
+
+// Generate description
+async function generateDesc() {
+  const id = document.getElementById('desc-id').value;
+  if (!id) { showResponse('desc-response', 'Enter a product ID.', true); return; }
+  setLoading('desc-spinner', null, true);
+  try {
+    const data = await apiFetch(`/ai/generate-description/${id}`, 'POST');
+    showResponse('desc-response', data);
+  } catch(e) { showResponse('desc-response', 'API error: ' + e.message, true); }
+  setLoading('desc-spinner', null, false);
+}
+
+// Extract attributes
+async function extractAttrs() {
+  const id = document.getElementById('attr-id').value;
+  if (!id) { showResponse('attr-response', 'Enter a product ID.', true); return; }
+  setLoading('attr-spinner', null, true);
+  try {
+    const data = await apiFetch(`/ai/extract-attributes/${id}`, 'POST');
+    if (data.attributes) {
+      const pills = Object.entries(data.attributes).map(([k,v]) =>
+        `<span class="attr-pill"><span class="attr-key">${k}</span><span class="attr-val">${v}</span></span>`
+      ).join('');
+      const el = document.getElementById('attr-response');
+      el.classList.add('visible');
+      el.classList.remove('error');
+      el.innerHTML = pills;
+    } else {
+      showResponse('attr-response', data);
+    }
+  } catch(e) { showResponse('attr-response', 'API error: ' + e.message, true); }
+  setLoading('attr-spinner', null, false);
+}
+
+// Extract from image
+async function extractFromImage() {
+  const id = document.getElementById('img-id').value;
+  const file = document.getElementById('img-file').files[0];
+  if (!id || !file) { showResponse('img-response', 'Enter a product ID and select an image.', true); return; }
+  setLoading('img-spinner', null, true);
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch(`${API}/ai/extract-from-image/${id}`, { method: 'POST', body: formData });
+    const text = await res.text();
+    let data = null;
+    if (text) {
+      try { data = JSON.parse(text); } catch { throw new Error(text.slice(0, 200)); }
+    }
+    if (!res.ok) throw new Error(formatApiError(data, res));
+    showResponse('img-response', data);
+  } catch(e) { showResponse('img-response', 'API error: ' + e.message, true); }
+  setLoading('img-spinner', null, false);
+}
+
+// Embed all
+async function embedAll() {
+  setLoading('embed-spinner', null, true);
+  try {
+    const data = await apiFetch('/search/embed-all', 'POST');
+    showResponse('embed-response', data);
+  } catch(e) { showResponse('embed-response', 'API error: ' + e.message, true); }
+  setLoading('embed-spinner', null, false);
+}
+
+// Search
+async function doSearch() {
+  const query = document.getElementById('search-query').value.trim();
+  const top_k = parseInt(document.getElementById('search-k').value) || 5;
+  if (!query) return;
+  setLoading('search-spinner', null, true);
+  document.getElementById('search-results').innerHTML = '';
+  try {
+    const data = await apiFetch('/search/', 'POST', { query, top_k });
+    const container = document.getElementById('search-results');
+    if (!data.results || !data.results.length) {
+      container.innerHTML = '<div class="empty-state">No results found.</div>';
+    } else {
+      const methodTag = data.method === 'semantic'
+        ? '<span class="tag tag-teal">semantic</span>'
+        : '<span class="tag tag-green">keyword</span>';
+      container.innerHTML = `<div style="margin-bottom:16px;color:var(--muted);font-size:11px">${data.results.length} results ${methodTag}</div>` +
+        data.results.map(r => `
+          <div class="search-result">
+            <div class="result-header">
+              <div class="result-name">${r.name}</div>
+              ${r.score !== undefined ? `<div class="result-score">${(r.score * 100).toFixed(1)}% match</div>` : ''}
+            </div>
+            ${r.description ? `<div class="result-desc">${r.description}</div>` : ''}
+            <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
+              ${r.category ? `<span class="tag tag-teal">${r.category}</span>` : ''}
+              ${r.price ? `<span style="color:var(--accent);font-size:12px">$${r.price.toFixed(2)}</span>` : ''}
+              <span style="color:var(--muted);font-size:11px">ID: ${r.id}</span>
+            </div>
+          </div>
+        `).join('');
+    }
+  } catch(e) {
+    document.getElementById('search-results').innerHTML = `<div class="empty-state">Error: ${e.message}</div>`;
+  }
+  setLoading('search-spinner', null, false);
+}
+
+// Sync product
+async function syncProduct() {
+  const id = document.getElementById('sync-id').value;
+  if (!id) { showResponse('sync-response', 'Enter a product ID.', true); return; }
+  setLoading('sync-spinner', null, true);
+  try {
+    const data = await apiFetch(`/sync/${id}`, 'POST');
+    showResponse('sync-response', data);
+  } catch(e) { showResponse('sync-response', 'API error: ' + e.message, true); }
+  setLoading('sync-spinner', null, false);
+}
+
+// Sync all
+async function syncAll() {
+  setLoading('syncall-spinner', null, true);
+  try {
+    const data = await apiFetch('/sync/all', 'POST');
+    showResponse('syncall-response', data);
+  } catch(e) { showResponse('syncall-response', 'API error: ' + e.message, true); }
+  setLoading('syncall-spinner', null, false);
+}
+
+// Load dashboard on start
+loadDashboard();
+</script>
+</body>
+</html>
