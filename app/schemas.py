@@ -33,3 +33,23 @@ class ProductOut(BaseModel):
 class SearchQuery(BaseModel):
     query: str
     top_k: int = 5
+
+class CustomerContext(BaseModel):
+    ip_address: Optional[str] = None
+    location: Optional[str] = None
+    season: Optional[str] = None
+    temperature: Optional[float] = None
+
+class SeasonalSearchQuery(BaseModel):
+    query: str
+    top_k: int = 5
+    customer_context: Optional[CustomerContext] = None
+    season_filter: Optional[str] = None
+    weather_filter: Optional[str] = None
+
+class SeasonalAttributes(BaseModel):
+    seasonality: list[str]
+    temperature_range: str
+    weather_conditions: list[str]
+    thickness_rating: int
+    layering_type: str

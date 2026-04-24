@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
 from app.database import Base, engine
-from app.routers import products, ai, search, sync
+from app.routers import products, ai, search, sync, seasonal, customer
 
 logger = logging.getLogger(__name__)
 ROOT_DIR = Path(__file__).resolve().parent.parent
@@ -40,6 +40,8 @@ app.include_router(products.router)
 app.include_router(ai.router)
 app.include_router(search.router)
 app.include_router(sync.router)
+app.include_router(seasonal.router)
+app.include_router(customer.router)
 
 
 @app.get("/health")
